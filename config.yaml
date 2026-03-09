@@ -51,6 +51,19 @@ git:
   branch_pattern: "training/cycle-{cycle}-{case}"
   auto_commit: true
 
+# Sync approved ARGUS changes back from training VM to workstation
+# Configure with your own SSH details
+sync:
+  enabled: false
+  remote_host: ""          # e.g., "user@training-vm"
+  remote_port: 22
+  remote_argus_path: "/opt/argus"
+  local_argus_path: ""     # path to local ARGUS repo on workstation
+  include_paths:
+    - "src/"
+    - "improvement/"
+    - "tests/"
+
 # Claude Code CLI configuration (primary transport — $0 via Max subscription)
 cli:
   cli_path: "/usr/bin/claude"

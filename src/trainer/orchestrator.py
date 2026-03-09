@@ -565,6 +565,19 @@ class Orchestrator:
                     cwd=str(self.config.target.local_path),
                     capture_output=True,
                 )
+
+            # Sync approved changes back to workstation
+            sync_ok = self._sync_argus_back(case_name, cycle, score)
+            if sync_ok:
+                await self.notifier.send(
+                    f"*Sync complete* — ARGUS changes synced to workstation\n"
+                    f"Next: review in local/argus, copy to public, push"
+                )
+            else:
+                await self.notifier.send(
+                    f"*Sync skipped or failed* — run `scripts/sync_argus_back.sh` manually"
+                )
+
             await self.notifier.send_complete(case_name, score, self.cost_tracker.cycle_cost)
             self.state.reset()
         elif decision == "reject":
@@ -583,6 +596,64 @@ class Orchestrator:
         else:
             logger.info("Skipped — moving on")
             self.state.reset()
+
+    # --- Sync ---
+
+    def _sync_argus_back(self, case_name: str, cycle: int, score: float) -> bool:
+        """Sync approved ARGUS changes from REMnux back to workstation.
+
+        Flow: REMnux /opt/argus → local/argus (workstation)
+        The user then manually copies public-safe files to the public repo.
+        """
+        sync = self.config.sync
+        if not sync.enabled:
+            logger.info("Sync disabled in config")
+            return False
+
+        if not sync.remote_host or not sync.local_argus_path:
+            logger.warning("Sync config incomplete: remote_host or local_argus_path missing")
+            return False
+
+        local_path = Path(sync.local_argus_path).expanduser()
+        if not local_path.exists():
+            logger.warning("Local ARGUS path does not exist: %s", local_path)
+            return False
+
+        # Build rsync command — only sync source code, not evidence/cases/venv
+        include_args = []
+        include_paths = sync.include_paths or ["src/", "improvement/", "tests/"]
+        for path in include_paths:
+            include_args.extend(["--include", f"{path}***"])
+        include_args.extend(["--exclude", "*"])
+
+        cmd = [
+            "rsync", "-avz",
+            *include_args,
+            "-e", f"ssh -p {sync.remote_port}",
+            f"{sync.remote_host}:{sync.remote_argus_path}/",
+            f"{local_path}/",
+        ]
+
+        logger.info("Syncing ARGUS changes: %s → %s", sync.remote_host, local_path)
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+            if result.returncode == 0:
+                logger.info("Sync successful:\n%s", result.stdout[-500:])
+                return True
+            else:
+                logger.error("Sync failed (exit %d): %s", result.returncode, result.stderr[:300])
+                return False
+        except subprocess.TimeoutExpired:
+            logger.error("Sync timed out after 120s")
+            return False
+        except Exception as e:
+            logger.exception("Sync failed")
+            return False
 
     # --- Utility methods ---
 

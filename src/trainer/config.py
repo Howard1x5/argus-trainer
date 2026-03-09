@@ -60,6 +60,18 @@ class ApprovalConfig:
 
 
 @dataclass
+class SyncConfig:
+    """Sync approved ARGUS changes back to workstation."""
+    enabled: bool = False
+    remote_host: str = ""  # e.g., "user@training-vm"
+    remote_port: int = 22
+    remote_argus_path: str = "/opt/argus"
+    local_argus_path: str = ""  # path to local ARGUS repo on workstation
+    # Only sync these paths (source code, not evidence/cases)
+    include_paths: list[str] | None = None
+
+
+@dataclass
 class GitConfig:
     branch_pattern: str = "training/cycle-{cycle}-{case}"
     auto_commit: bool = True
@@ -91,6 +103,7 @@ class Config:
     approval: ApprovalConfig
     git: GitConfig
     cli: CliConfig
+    sync: SyncConfig
     logging: LoggingConfig
 
     # From .env
@@ -145,6 +158,7 @@ def load_config(
     approval_raw = raw.get("approval", {})
     git_raw = raw.get("git", {})
     cli_raw = raw.get("cli", {})
+    sync_raw = raw.get("sync", {})
     logging_raw = raw.get("logging", {})
 
     # Backwards compat: old 'sdk' section had cli_path
@@ -186,6 +200,10 @@ def load_config(
             k: v for k, v in cli_raw.items()
             if k in CliConfig.__dataclass_fields__
         }) if cli_raw else CliConfig(),
+        sync=SyncConfig(**{
+            k: v for k, v in sync_raw.items()
+            if k in SyncConfig.__dataclass_fields__
+        }) if sync_raw else SyncConfig(),
         logging=LoggingConfig(**logging_raw) if logging_raw else LoggingConfig(),
         anthropic_api_key=os.getenv("ANTHROPIC_API_KEY", ""),
         telegram_bot_token=os.getenv("TELEGRAM_BOT_TOKEN", ""),
