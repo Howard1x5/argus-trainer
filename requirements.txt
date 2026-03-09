@@ -1,0 +1,11 @@
+# Core dependencies
+python-telegram-bot>=21.0
+python-dotenv
+pyyaml
+
+# Testing
+pytest
+pytest-asyncio
+
+# Optional: uncomment to use Agent SDK instead of CLI
+# claude-agent-sdk

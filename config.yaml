@@ -1,0 +1,69 @@
+# ARGUS Training Agent v2 Configuration
+# Walkthrough-first, cost-efficient strategy.
+# Uses Claude Code CLI (Max subscription = $0) instead of Agent SDK.
+
+target:
+  name: "argus"
+  repo_url: "git@github.com:Howard1x5/argus.git"
+  local_path: "/opt/argus"
+  venv_path: "/opt/argus/.venv"
+
+runner:
+  # CLI commands (relative to target.local_path) — orchestrator-controlled only
+  add_case: "python improvement/runner.py add-case"
+  run: "python improvement/runner.py run"
+  regression: "python improvement/runner.py regression"
+  scores: "python improvement/runner.py scores"
+  # Timeout for full pipeline runs (seconds)
+  run_timeout: 1800
+  # Timeout for extraction-only runs (seconds)
+  extraction_timeout: 600
+
+cases:
+  - name: "spottedinthewild"
+    walkthrough_url: ""
+    status: "complete"
+  - name: "lockdown"
+    walkthrough_url: ""
+    status: "pending"
+
+budget:
+  # With CLI mode these are mostly symbolic (Max subscription = $0)
+  # but kept for audit trail and SDK fallback
+  max_per_cycle_usd: 5.00
+  max_total_usd: 50.00
+  warn_threshold_pct: 80
+
+cycles:
+  # Maximum pipeline runs per case (v2: strictly enforced by orchestrator)
+  max_pipeline_runs: 2
+  # Minimum score improvement to continue gap analysis
+  min_improvement: 2.0
+  # Target score to skip remaining phases
+  target_score: 95.0
+
+approval:
+  poll_interval: 60
+  auto_approve: false
+  approval_timeout: 0
+
+git:
+  branch_pattern: "training/cycle-{cycle}-{case}"
+  auto_commit: true
+
+# Claude Code CLI configuration (primary transport — $0 via Max subscription)
+cli:
+  cli_path: "/usr/bin/claude"
+  default_timeout: 300
+  max_timeout: 900
+  max_turns: 50
+  allowed_tools: "Read,Write,Edit,Bash,Glob,Grep"
+
+# To switch back to SDK (API credits):
+# 1. Set ANTHROPIC_API_KEY in .env
+# 2. Replace claude_runner.invoke() calls with SDK query()
+# 3. Everything else stays the same (prompts are transport-agnostic)
+
+logging:
+  tool_log: "logs/tool_use.jsonl"
+  level: "DEBUG"

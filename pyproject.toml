@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "argus-trainer"
+version = "0.1.0"
+description = "Autonomous ARGUS self-improvement agent"
+requires-python = ">=3.11"
+dependencies = [
+    "claude-agent-sdk",
+    "python-telegram-bot>=21.0",
+    "python-dotenv",
+    "pyyaml",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
